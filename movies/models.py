@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Movie(models.Model):
     title=models.CharField(max_length=250)
     price=models.IntegerField()
@@ -19,4 +20,13 @@ class Seat(models.Model):
 
     def __str__(self) -> str:
         return f"{self.occupant_first_name} {self.occupant_last_name} seat_no {self.seat_no}"
+
+
+class Payment(models.Model):
+    first_name=models.CharField(max_length=300)
+    last_name=models.CharField(max_length=300)
+    email=models.EmailField(max_length=500)
+    amount= models.IntegerField()
+    movie=models.ForeignKey(Movie,on_delete=models.SET_NULL,null=True,blank=True)
+    seat_no=models.CharField(max_length=50)
 
