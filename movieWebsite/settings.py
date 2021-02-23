@@ -25,7 +25,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -125,5 +125,8 @@ STATIC_ROOT=BASE_DIR/'static_root'
 MEDIA_ROOT=BASE_DIR/'media_root'
 
 STATICFILES_DIRS=[
-    BASE_DIR/'static'
+    BASE_DIR/'static',
 ]
+
+# payment portal
+PAYSTACK_SECRET=os.environ.get('PAYSTACK_SECRET')
