@@ -3,10 +3,12 @@ const seats = document.querySelectorAll('.row .seat:not(.occupied)');
 const count = document.getElementById('count');
 const total = document.getElementById('total');
 const movieSelect = document.getElementById('movie');
+const cta_btn = document.querySelector('button.purchase_btn')
 
-populateUI();
 
 let ticketPrice = +movieSelect.value;
+
+populateUI();
 
 // Save selected movie index and price
 function setMovieData(movieIndex, moviePrice) {
@@ -54,6 +56,7 @@ movieSelect.addEventListener('change', e => {
   ticketPrice = +e.target.value;
   setMovieData(e.target.selectedIndex, e.target.value);
   updateSelectedCount();
+  refreshSeat()
 });
 
 // Seat click event
