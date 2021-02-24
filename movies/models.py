@@ -8,7 +8,7 @@ class Movie(models.Model):
     created=models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
-        return f"{self.title} ${self.price}"
+        return f"{self.title} (${self.price})"
 
 
 class Seat(models.Model):
@@ -27,6 +27,13 @@ class Payment(models.Model):
     last_name=models.CharField(max_length=300)
     email=models.EmailField(max_length=500)
     amount= models.IntegerField()
+    phone=models.CharField(max_length=20)
     movie=models.ForeignKey(Movie,on_delete=models.SET_NULL,null=True,blank=True)
     seat_no=models.CharField(max_length=50)
 
+class PaymentIntent(models.Model):
+    referrer=models.URLField()
+    movie_title=models.CharField(max_length=500)
+    seat_numbers=models.CharField(max_length=100)
+
+    
