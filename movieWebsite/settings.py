@@ -128,5 +128,20 @@ STATICFILES_DIRS=[
     BASE_DIR/'static',
 ]
 
+# for website config
+HOST_URL='http://952655015b1d.ngrok.io'
+
 # payment portal
 PAYSTACK_SECRET=os.environ.get('PAYSTACK_SECRET')
+PAYSTACK_IP=['52.31.139.75','52.49.173.169','52.214.14.220']
+
+# Email config
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST='smtp.gmail.com'
+EMAIL_PORT=587
+EMAIL_HOST_USER=os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD=os.environ.get('EMAIL_PASSWORD')
+EMAIL_SUBJECT_PREFIX='[Movie Tickets]'
+EMAIL_USE_TLS=True
+
