@@ -9,7 +9,8 @@ async function contactAPI(url,body){
     const response=await fetch(url,{
         method:'POST',
         headers:{
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector("input[name='csrfmiddlewaretoken']").value
         },
         body:JSON.stringify(body)
     })
