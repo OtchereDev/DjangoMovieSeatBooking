@@ -1,14 +1,19 @@
-from json.decoder import JSONDecodeError
+
+from django.http.response import HttpResponseForbidden
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse,HttpResponse
-from django.template.loader import render_to_string
 from django.conf import settings
 
 from .models import Movie,Payment,PaymentIntent,Seat
+from .helpers import verify_webhook
+from .tasks import mailing
 
 import json
 import requests
+
+from ipware import get_client_ip
+
 
 def index(request):
     movies=Movie.objects.all()
@@ -16,7 +21,7 @@ def index(request):
         'movies':movies
     })
 
-@csrf_exempt
+
 def validateSeats(request):
     data=json.loads(request.body)
     movie=Movie.objects.get(title=data['movie_title'])
@@ -38,7 +43,7 @@ def validateSeats(request):
         'response':'good'
     })
 
-@csrf_exempt
+
 def makePayment(request):
     data=json.loads(request.body)
 
@@ -56,7 +61,9 @@ def makePayment(request):
         "name": "Payment of Movie Ticket", 
         "amount": int((cost*len(seat_numbers)))*100,
         "description": f"Payment for {len(seat_numbers)} tickets for {movie_title}",
-        'collect_phone': True,
+        "collect_phone": True,
+        "redirect_url": f"{settings.HOST_URL}/payment_confirmed/"
+        
     }
     
     response=requests.post('https://api.paystack.co/page',headers=header,json=data)
@@ -74,53 +81,56 @@ def makePayment(request):
     return JsonResponse({
         'error':'sorry service not available'
     })
-    # for formatting email to be sent
-    rendered = render_to_string('email_template.html', {'foo': 'bar'})
-
-
 
 @csrf_exempt
 def webhook(request):
-    data=json.loads(request.body)
-    if data['event']=='charge.success':
-        first_name=data['data']['customer']['first_name']
-        last_name=data['data']['customer']['last_name']
-        email=data['data']['customer']['email']
-        phone=data['data']['customer']['phone']
-        amount=int(data['data']['amount'])/100
+    if request.method=='POST':
+        ip, is_routable = get_client_ip(request)
 
-        referrer=data['data']['metadata']['referrer']
-        payment_intent=PaymentIntent.objects.get(referrer=referrer)
+        if ip in settings.PAYSTACK_IP and verify_webhook(request):
+            data=json.loads(request.body)
+            if data['event']=='charge.success':
+                first_name=data['data']['customer']['first_name']
+                last_name=data['data']['customer']['last_name']
+                email=data['data']['customer']['email']
+                phone=data['data']['customer']['phone']
+                amount=int(data['data']['amount'])/100
 
-        movie_title=payment_intent.movie_title
-        movie=Movie.objects.get(title=movie_title)
-        booked_seat=json.loads(payment_intent.seat_numbers)
+                referrer=data['data']['metadata']['referrer']
+                payment_intent=PaymentIntent.objects.get(referrer=referrer)
 
-        for seat_no in booked_seat:
+                movie_title=payment_intent.movie_title
+                movie=Movie.objects.get(title=movie_title)
+                booked_seat=json.loads(payment_intent.seat_numbers)
 
-            seat=Seat.objects.create(seat_no=seat_no,
-            occupant_first_name=first_name,
-            occupant_last_name=last_name,
-            occupant_email=email)
+                for seat_no in booked_seat:
 
-            movie.booked_seats.add(seat)
-            movie.save()
+                    seat=Seat.objects.create(seat_no=seat_no,
+                    occupant_first_name=first_name,
+                    occupant_last_name=last_name,
+                    occupant_email=email)
 
-            Payment.objects.create(
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    amount=amount/len(booked_seat),
-                    phone=phone,
-                    movie=movie,
-                    seat_no=seat_no,)
+                    movie.booked_seats.add(seat)
+                    movie.save()
 
+                    Payment.objects.create(
+                            first_name=first_name,
+                            last_name=last_name,
+                            email=email,
+                            amount=amount/len(booked_seat),
+                            phone=phone,
+                            movie=movie,
+                            seat_no=seat_no,)
                     
+                    mailing.delay(first_name=first_name,email=email,
+                                    seat_no=seat_no,movie_title=movie_title)
 
-    return HttpResponse(200)
+            return HttpResponse(200)
+    return HttpResponseForbidden()
 
-@csrf_exempt
+
 def occupiedSeats(request):
+    
     data=json.loads(request.body)
     movie=Movie.objects.get(title=data['movie_title'])
 
@@ -132,3 +142,9 @@ def occupiedSeats(request):
         'movie':str(movie)
     })
 
+def paymentConfirmed(request):
+    # return render(request,'payment_confirmed.html')
+    return HttpResponse('<h2>Thank you for purchasing Us....</h2>\n\
+        <h2>An email has been sent to your email address with your seat number</h2>\n\
+        <h2>Thank you once again</h2>\n\
+        <a href="/" >Click here to go to homepage</a>',)
